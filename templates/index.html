@@ -5,6 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Search</title>
     <style>
+        /* Banner styles */
+        .banner {
+            background-color: #f8f9fa;
+            padding: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .banner-container {
+            width: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .banner-logo {
+            height: 50px;
+            width: auto;
+        }
+
+        .banner-title {
+            font-size: 1.8em;
+            color: #333;
+            margin: 0;
+            font-weight: bold;
+        }
+
         /* Basic styles for the grid container */
         .grid-container {
             display: grid;
@@ -71,6 +101,15 @@
         @media (max-width: 768px) {
             .grid-container {
                 grid-template-columns: repeat(2, 1fr); /* 2 columns for smaller screens */
+            }
+
+            .banner-container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .banner-logo {
+                margin-bottom: 10px;
             }
         }
 
@@ -327,13 +366,38 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             margin-top: 20px;
         }
+
+        .original-price {
+            font-size: 0.8em;
+            color: #888;
+            text-decoration: line-through;
+            margin-left: 5px;
+        }
+
+        .marketplace-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.8);
+            text-transform: capitalize;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Search for Products</h1>
+<!-- New banner with logo -->
+<div class="banner">
+    <div class="banner-container">
+        <img src="static/images/patchup1.png" alt="PatchUp Logo" class="banner-logo">
+        <h1 class="banner-title">PatchUp Marketplace Search</h1>
+    </div>
+</div>
 
+<div class="container">
     <div class="search-box">
         <input type="text" id="searchQuery" placeholder="Enter a product name..." />
         <button class="search-button" id="search-button">Search</button>
@@ -378,6 +442,15 @@
                 </div>
                 <div id="ebay-status" class="progress-status">0%</div>
             </div>
+
+            <div class="progress-item">
+                <img src="static/images/rakuten.png" alt="Rakuten JP" class="source-icon">
+                <div class="progress-label">Rakuten JP</div>
+                <div class="progress-bar">
+                    <div id="rakuten-progress" class="progress-fill"></div>
+                </div>
+                <div id="rakuten-status" class="progress-status">0%</div>
+            </div>
         </div>
 
         <div id="search-status" class="results-summary">Starting search...</div>
@@ -405,6 +478,7 @@
                     <option value="depop">Depop</option>
                     <option value="mercari">Mercari</option>
                     <option value="ebay">eBay</option>
+                    <option value="rakuten">Rakuten JP</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -428,7 +502,7 @@
 
 <script>
     // Define the sources we'll be searching
-    const sources = ['vinted', 'depop', 'mercari', 'ebay'];
+    const sources = ['vinted', 'depop', 'mercari', 'ebay', 'rakuten'];
     let completedSources = 0;
     let allResults = [];
     let filteredResults = [];
@@ -715,6 +789,7 @@
             'depop': 'static/images/depop.png',
             'mercari': 'static/images/mercari.png',
             'ebay': 'static/images/ebay.png',
+            'rakuten': 'static/images/rakuten.png',
         };
 
         // Loop through the products and create HTML for each
@@ -783,31 +858,6 @@
         }
         return 0;
     }
-
-    // Add some CSS for the original price display
-    document.head.insertAdjacentHTML('beforeend', `
-    <style>
-    .original-price {
-        font-size: 0.8em;
-        color: #888;
-        text-decoration: line-through;
-        margin-left: 5px;
-    }
-
-    .marketplace-badge {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: bold;
-        background-color: rgba(255, 255, 255, 0.8);
-        text-transform: capitalize;
-    }
-    </style>
-    `);
-
 
     // Function to shuffle the array (Fisher-Yates)
     function shuffleArray(array) {
