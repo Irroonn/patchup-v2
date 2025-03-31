@@ -405,8 +405,81 @@ def scrape_ebay(query):
 
     return products[-10:]
 
+def scrape_rakuten(query):
+    # Set up Selenium options
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-# New route for progressive search results
+    # Initialize WebDriver
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+
+    try:
+        # Rakuten JP search URL
+        url = f"https://search.rakuten.co.jp/search/mall/{query}/?l-id=s_search&l2-id=shop_header_search"
+        driver.get(url)
+
+        # Wait for product items to load
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".dui-card.searchresultitem"))
+        )
+
+        items = []
+        # Find all product cards
+        product_cards = driver.find_elements(By.CSS_SELECTOR, ".dui-card.searchresultitem")
+
+        for product in product_cards[:10]:  # Limit to 10 results
+            try:
+                # Extract title
+                title_element = product.find_element(By.CSS_SELECTOR, ".title-link--3Yuev")
+                title = title_element.text
+                # Remove [PR] prefix if present
+                if title.startswith("[PR]"):
+                    title = title.replace("[PR]", "").strip()
+
+                # Extract link
+                link = title_element.get_attribute("href")
+
+                # Extract image
+                image_element = product.find_element(By.CSS_SELECTOR, ".image--x5mNi")
+                image = image_element.get_attribute("src") if image_element else "No image"
+
+                # Extract price
+                try:
+                    price_element = product.find_element(By.CSS_SELECTOR, ".price--3zUvK")
+                    price_text = price_element.text
+                    # Clean up the price text (remove "円" which means yen)
+                    price = price_text.replace("円", "").replace(",", "").strip()
+                    # Add yen symbol for conversion
+                    price = f"¥{price}"
+                except:
+                    price = "No price"
+
+                # Convert price to GBP
+                converted_price = convert_to_gbp(price)
+
+                items.append({
+                    "title": title,
+                    "price": converted_price,
+                    "link": link,
+                    "image": image,
+                    "source": "rakuten"
+                })
+
+            except Exception as e:
+                print(f"❌ Error parsing Rakuten product: {e}")
+
+        return items
+
+    finally:
+        driver.quit()
+
+
+# Update the progressive search route to include Rakuten
 @app.route('/progressive-search', methods=['GET'])
 def progressive_search():
     query = request.args.get('query', type=str)
@@ -420,7 +493,8 @@ def progressive_search():
         'vinted': scrape_vinted,
         'depop': scrape_depop,
         'mercari': scrape_mercari,
-        'ebay': scrape_ebay
+        'ebay': scrape_ebay,
+        'rakuten': scrape_rakuten  # Add the new Rakuten scraper
     }
 
     # Check if requested source is valid
@@ -432,7 +506,7 @@ def progressive_search():
     return jsonify(results)
 
 
-# Maintain the original combined search for backwards compatibility
+# Update the combined search route to include Rakuten
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query', type=str)
@@ -447,17 +521,18 @@ def search():
         depop_future = executor.submit(scrape_depop, query)
         mercari_future = executor.submit(scrape_mercari, query)
         ebay_future = executor.submit(scrape_ebay, query)
+        rakuten_future = executor.submit(scrape_rakuten, query)  # Add Rakuten scraper
 
         # Get results as they complete
         vinted_results = vinted_future.result()
         depop_results = depop_future.result()
         mercari_results = mercari_future.result()
         ebay_results = ebay_future.result()
+        rakuten_results = rakuten_future.result()  # Get Rakuten results
 
     # Combine results and return them
-    all_results = vinted_results + depop_results + mercari_results + ebay_results
+    all_results = vinted_results + depop_results + mercari_results + ebay_results + rakuten_results
     return jsonify(all_results)
-
 
 if __name__ == "__main__":
     app.run(debug=True)
